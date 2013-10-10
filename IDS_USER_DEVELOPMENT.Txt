@@ -1,0 +1,181 @@
+    IDS 代码继续开发文档
+
+
+    Version    Date    Author
+
+    V0.1    07/20/12    Sam
+
+    V0.2    07/31/12    Sam
+
+    V0.3    08/25/12    Sam
+
+    V0.4    09/21/12    Sam
+
+
+一、 IDS 简介:
+
+    IDS 是imapx800 芯片上的整个显示系统,包括两个完全独立的显示模块: IDS0 && IDS1。
+
+    可支持的显示屏包括: LCD, I80 , TVIF , MIPIDSI, HDMI 等。
+
+    其中MIPI DSI 只能挂在IDS0 上, HDMI 只能挂在IDS1 上,其他的理论上可挂在任何一个IDS 上。
+
+二、基本的概念说明:
+
+    Local IDS:
+
+    作为framebuffer 直接显示的IDS。
+
+    Extend IDS:
+
+    相对于Local IDS 而言。作为扩展设备使用,一般支持设备的动态拔插操作。
+
+    IDS driver :
+
+    所对应的目录为: ids_drv_i800
+
+    ids_lib_i800:
+
+    管理所有IDS 相关状态参数等的管理，以及模式的变化等，也是外接显示设备的调用者。
+
+    lcd_api 目录:
+
+    LCD设备提供的api, 供ids_lib 等调用 ,hdmi_api 等同理。
+
+    lcd_lib_i800 :
+
+    设备模块寄存器操作库,hdmi_lib_i800 同理。
+
+    ids_pwl_linux.c :
+
+    ids 所有的底层操作文件。包括寄存器读写,模块初始化,内核环境注册等。
+
+    fblayer :
+
+    FrameBuffer 驱动所对应的window, 通指window0, 由于UI 显示在此窗口上,故将其区别对待。
+
+    wlayer :
+
+    指的是OSD 上四层窗口的任意一层,包括window0.
+
+    wlayer 显示:
+
+    应用程序可以调用IDS API 打开一层窗口显示独立于UI 的任意内容。
+
+    vmode 模式:
+
+    用于双显系统,vmode 注册于一个service (比如hdmi service)。此service 在系统起来后注册对于扩展设备(HDMI 等)的监测。如果有动态设备插入,则显示可支持的选择以供用户选择。
+
+三、 显示流程图:
+
+    此下双显的简化流程图,如需进一步了解,请自行关注代码。
+
+    LocalIDS :           FrameBuffer -->    -->  display device (lcd_api→lcd_lib_..) (--- kernel 层)
+
+				    				|       		|
+
+    						ids driver < --- > ids_lib     (--- kernel 层)
+
+    							|                       |
+
+ExtendIDS :    vmode --> extend layer -->         --> G2D Scaler --> display device (HDMI)  (--- FS 层)
+
+四、单显代码流程:
+
+    以LCD 作为Local IDS 显示屏为例:
+
+    frame buffer 驱动负责内核与IDS 的交互,实际的模块操作都是在IDS driver 以及它所挂在的ids lib && device lib 中。
+
+    IDS driver 支持从item 读取当前local display 设置的配置作为主输出。保存一个lcd 屏的id 传到lcd_api, lcd_api 会根据此id 选择相应的LCD 屏所对应的配置信息,然后传给将控制器配置息部分传给lcd_lib_i800 配置芯片的lcd controller 寄存器。
+
+
+五、添加一个新的 LCD 屏的支持:
+
+    1、对于后续开发而言,如果没有特殊的需求,只是添加一个新的LCD 屏,则所需要做的工作是:
+
+    1| 在启动item 中添加新屏的item 选项。
+
+    2| 在$(InfotmMedia)/lcd_api/source/ 目录下添加一个针对新屏的文件，文件的内容必须符合规定的模式，例如lcd_BF097XN01_1024x768.c
+
+    3|  在$(InfotmMedia)/lcd_api/source/lcd_cfg.h 中添加对新屏的支持，请参照相应的格式。
+
+    4| 在$(InfotmMedia)/lcd_api/source/Makefile 中增加步骤2 所添加的文件的编译。
+
+    2、新的LCD屏所对应文件的说明，以lcd_BF097XN01_1024x768.c 为例。
+
+    1|  lcdc_config_t 结构体是屏spec 所要求的数据信号相关的参数定义。
+
+    2|  LCD_Priv_conf 结构体是每个屏所私有的属性，其内部总共有7个block, 每个block 对应一种操作，lcd_api 里将所有有效的block 都按照指定的顺序调用一遍。顺序规定为：
+
+    打开屏时从block[0] ---- - >  block[6]
+
+    关闭屏时从block[6] ---- - >  block[0]
+
+    顺序每个屏可以自由调整，只需要修改block 中的顺序数值即可。
+
+    LCD_Priv_conf 所定义的实体会被lcd_cfg.h 引用，添加到所有的LCD 屏的支持列表中。
+
+    3|  block 的定义。
+
+    每个block 所对应的结构体是lcd_ob, 其具体的说明请参考:
+
+    $(InfotmMedia)/lcd_api/source/lcd_def.h
+
+APPEDIX A:
+
+    item 中IDS 相关定义,以GF33 屏类型 BF097XN01_1024x768 为例：
+
+    ids.locidsx               0    ## 本地所使用的IDS 为IDS0
+
+    ids.fb.resvFblayer        1     ##  framebuffer 是否有显示(BOX 上为0)
+
+    ids.fb.pixfmt             888     ##  framebuffer 的像素格式为888 或者565
+
+    ids.fb.width              1024     ## framebuffer  宽
+
+    ids.fb.height             768     ## framebuffer  高
+
+    ids.loc.dev.num           1     ## local 所支持的设备个数
+
+    ids.loc.dev.prefer        0     ## local 设备中默认支持的设备号
+
+    ids.loc.dev0.interface    lcd     ## local 设备0 的接口类型
+
+    ids.loc.dev0.type         BF097XN_1024x768     ## local 设备0 的具体型号
+
+    ids.loc.dev0.data_port    666     ##  设备0输出端口有效数据位
+
+    ids.loc.dev0.rgb_order    bgr     ##  设备0输出端口rgb 顺序
+
+    ids.loc.dev0.lcd.power    pads.27     ##   LCD屏的供电方式，也可以是pmu.xxx
+
+    ids.loc.dev0.lvds.power   pmu.vmmc     ##  lvds 芯片的供电方式(如果有)，也可以是pads.xx
+
+    ##ids.loc.dev1.interface   dsi     ##  local设备1 的接口类型（如果有）
+
+    [...]
+
+    ids.loc.dev0.acm_level    60     ## 设备0 饱和度的默认值(0 ~ 100)
+
+    ids.ext.dev.num           1     ## 扩展的设备数
+
+    ids.ext.dev.prefer        0     ## 扩展设备的默认支持设备号
+
+    ids.ext.dev0.interface    hdmi     ##  扩展设备0 的接口类型
+
+    ids.ext.dev0.type         dynamic     ## 扩展设备0 的具体型号,dynamic 为动态拔插设备，例如HDMI
+
+    ##ids.ext.dev1.interface   i80     ##  扩展设备1 的接口类型（如果有）
+
+    [...]
+
+APPEDIX B:
+
+    当前LCD 的clock 分配机制( IDS0):
+
+    1、在lcd_lib_i800 中根据屏的配置信息计算出所需要的clk 值;
+
+    2、因为最终的线上clock 值由系统管理器那边和lcd 内部的分频共同决定,所以我们从lcd 内部的分频器从1 开始到7,做一个查找, 针对此分频再向系统管理器那边要求一个相对应的clock （idspwl_module_request_frequency)。因为系统管理器那边对IDS 是固定从EPLL(888M)分频(禁用NCO)，不一定能分到精确的值，所以也是提供一个最接近的频率值。所以我们以此找出一个让最终得到的clock 值相对最精确的配置,将其设置给系统管理器以及LCD controller.所以使用者来说，lcd的频率是能够根据参数灵活配置的，是不需要关注频率的设置的。
+
+OVER.
+

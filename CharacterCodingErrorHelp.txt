@@ -1,0 +1,9 @@
+if host machine is Ubuntu and Chinese character cannot be read,
+   please add below to your /etc/vim/vimrc or ~/.vimrc
+
+set encoding=utf-8
+set fileencodings=ucs-bom,utf-8,cp936
+set fileencoding=gb2312
+set termencoding=utf-8
+
+this can help you to open gb2312 coding file in vim.

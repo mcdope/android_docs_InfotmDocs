@@ -1,0 +1,708 @@
+items.itm文件
+-------------------------------------------------------------------------------------------
+Items配置文件是InfoTMIC为实现平台之间的兼容而开发出来的一套配置文件描述。客户在开发出新的硬件平台时，
+不需要更改InfoTMIC提供的通用方案代码，只需要更改Items文件内容，就可以使InfoTMIC提供的通用方案运行于该平
+台上。
+-------------------------------------------------------------------------------------------
+Items有如下两点局限性：
+
+  Items只是在 InfoTMIC通用方案框架内实现兼容，若要开发新功能，只能修改代码，无
+
+    法通过Items来实现。
+
+  Items提供的兼容只对下文中描述的模块有效。
+-------------------------------------------------------------------------------------------
+items本质是一个纯文本文档，可以用记事本打开编辑。Items书写需要遵照如下规则：
+
+  因API统一命名前缀为items，所以配置文件统一命名后缀名.itm
+
+  配置文件采用#做为注释符
+
+  必须采用items.start和items.end来标志文件的开头开结尾
+
+  每条描述分为两段(key和string)，每段不能超过64个字节
+
+  每段可以分节，个数不限
+
+-------------------------------------------------------------------------------------------
+
+基本items.itm文件格式如下：
+############################
+items.start
+#comment about this item
+item_name1		item_value1
+item_name2		item_value2
+item_name3		item_value3
+item_name4		item_value4
+item_name5		item_value5
+			.
+			.
+			.
+			.
+			.
+			.
+item_name6		item_value6
+items.end
+############################
+
+------------------------------------------------------------------------------------------
+条目解析
+
+下文针对每条item进行详细的说明。没有提到的部分，客户一般不需要修改。硬件无对应功能的部分,可将其注释掉,以免引起不必要的问题.
+说明部分格式如下：
+
+item_name : item_available_values : item_function
+
+item_available_values的值说明：
+
+STR    该字段可以接受任意64字节以内的字符串(ffffffffffffffff)
+
+STR [I2C]    该字段可以接受i2c.0  i2c.1  i2c.2  i2c.3
+
+STR [SPI]    该字段可以接受spi.0  spi.1
+
+STR [UART]    该字段可以接受uart.0  uart.1  uart.2  uart.3
+
+STR [PMU]    该字段可以接受 pmu.xxx，xxx为电路中PMU电压输出端口的名称小写，请参考以下Cpu频率调节的cpu.power的设置。
+
+STR [PADS]    该字段可以接受pads.0 ~ pads.159；请根据原理图中引脚的Ball Name或
+
+    GPIO编号，在相应芯片的<<PAD定义查询表>>中查找相应的pad编号。
+
+    提示：该字段可接受负值，负值表示该值的输出值为取反后的值。例如
+
+    sensor.grivaty.int    pads.-75在软件输出1时，实际会输出0
+
+STR [PWM]    该字段可以接受pwm.0  pwm.1  pwm.2  pwm.3
+
+STR [LIST]    该字段只能接受右侧列表中的值。
+
+NUM    该字段可以接受任意数字
+
+NUM [a ~ b]    该字段可以接受a ~ b之间的任意整数，含a, b
+
+NUM [a, b, c…]  该字段可以接受a, b 或c…
+-------------------------------------------------------------------------------------
+
+items.itm的内容包括:
+
+######################## board common #################################
+#board.name	                      :STR 	: 在应用程序Settings/about tablet--->Model number中显示的字符串	
+#board.device	                      :STR 	: 	
+#board.model	                      :STR 	:
+#board.hwid		              :STR      :产品硬件ID (预留)
+#board.os		              :STR [LIST]	:产品所用的操作系统 (预留)
+#board.case		              :STR [LIST]     	:产品所用的iMAPx820/iMAPx810的case号,MID统一用case 0
+#board.language		              :STR [LIST]     	:产品所使用的默认语言(预留)   
+#board.disk	                      :STR [LIST](nnd mmc0 mmc1 udisk0 hd)     	:产品的主储存器，内部储存类型.存储设备类型 Support (nnd mmc0 mmc1 udisk0 hd) eg:nnd=nandflash 	
+#board.phase	                      :factory
+#board.antishake                      :
+#----------------------------------------------------------------------
+board.name		GF33
+board.device	GF33
+board.model		gf33
+board.hwid		11.25.24.34
+board.os		android
+board.case		0
+board.language	english    
+board.disk	    nnd	
+
+#----------------------------------------------------------------------
+
+
+
+系统feature设置，作用同frameworks/native/data/etc/中的属性xml一样
+############################ borad hw feature #########################
+audio.low_latency.exist               :NUM[0,1]	    :0 or 1 #whether the device's audio pipeline is low-latency
+nfc.exist                             :NUM[0,1]	    :0 or 1 #whether the device can communicate using Near-Field Communications(NFC)
+microphone.exist                      :NUM[0,1]	    :0 or 1 #whether the device can record audio via a microphone.
+sensor.barometer.exist                :NUM[0,1]	    :0 or 1 #whether the device includes a barometer (air pressure sensor.)
+sensor.proximity.exist                :NUM[0,1]	    :0 or 1 #whether the device includes a proximity sensor.
+telephony.cdma.exist                  :NUM[0,1]	    :0 or 1 #whether the device has a CDMA telephony stack.
+telephony.gsm.exist                   :NUM[0,1]	    :0 or 1 #whether the device has a GSM telephony stack.
+#----------------------------------------------------------------------
+audio.low_latency.exist                 0 
+nfc.exist                               0 
+microphone.exist                        1 
+sensor.barometer.exist                  0 
+sensor.proximity.exist                  0 
+telephony.cdma.exist                    0 
+telephony.gsm.exist                     0 
+#----------------------------------------------------------------------
+
+
+
+动态调频:CPU GPU VPU DDR
+############################# DVFS setting ############################
+#dvfs.enable		    	:NUM [0 ,1]     :动态电压频率设置总开关
+#dvfs.gpu.enable		:NUM [0 ,1]     :动态gpu电压频率设置 
+#dvfs.vpu.enable		:NUM [0 ,1]     :动态vpu电压频率设置 
+#dvfs.ddr.enable		:NUM [0 ,1]     :动态ddr电压频率设置 
+#----------------------------------------------------------------------
+	dvfs.enable		1
+	dvfs.gpu.enable		1
+	dvfs.vpu.enable		1
+	dvfs.ddr.enable		0
+#----------------------------------------------------------------------
+
+GPU频率设置
+########################### GPU setting ###############################
+#gpu.freq.max       :NUM[111,222,296,444]  :gpu最大频率 GPU frequency setting  (111mhz 222mhz 296mhz 444mhz) 
+
+#----------------------------------------------------------------------
+gpu.freq.max        444
+
+#----------------------------------------------------------------------
+
+CPU频率调节
+########################## CPU setting ################################
+#cpu.freq.adjust	 :
+#cpu.power	         :STR [PMU]        :cpu核心供电管脚(预留)
+#cpu.io33.power		 :STR [PMU]        :cpu io口供电管脚(预留)
+#----------------------------------------------------------------------
+	cpu.freq.adjust	    0.100
+	cpu.power		    pmu.sw1
+	cpu.io33.power		pmu.sw2
+#----------------------------------------------------------------------
+
+
+DDR内存参数设置
+######################## memory	#######################################
+	memory.cscount		:NUM[1,2]     :ddr片选,对应cs的片选个数    1        # 1 or 2 CS chip select
+	memory.power	       	:STR [PMU]    :ddr供电管脚pmu.swio # DDR power
+	memory.freq		:NUM[264-372,396,420,444,468,504,528,552,576,600]  :ddr频率设置(单位MHz) # DDR freq. 
+	memory.type             :STR [LIST](mDDR,DDR2,DDR3,LPDDR2)    :ddr类型DDR3     # mDDR DDR2 DDR3 or LPDDR2
+	memory.io_width         :NUM[8,16,32]  :ddr单颗数据接口宽度
+	memory.density          :STR [LIST]    :ddr 单颗数据密度(单位为bit)例如：系统由总内存1GByte，4 颗256*8的组成。那么io_width为8，此字段为256MB*8=2Gbit # 64MB 128MB 256MB 512MB 1GB 2GB 4GB 8GB   eg: 2GB=1024MB---> 2GB*4=8GB/8=1024MB
+	memory.cl               :NUM[2~8]     :ddr 参数
+	memory.rtt              :STR [LIST](DIV_4,DIV_2,DIV_6)     :ddr 参数,only for DDR3# DIV_4 DIV_2 DIV_6 only for DDR3
+	memory.driver           :STR [LIST](DIV_6,DIV_7)     :ddr 参数,only for DDR3DIV_6    # DIV_6 DIV_7 only for DDR3
+	memory.reduce_en        :NUM[0,1]     :0. 32bit 数据长度,1. 16bit数据长度
+	memory.train_en         :NUM[0,1]     :ddr 训练设置,only for DDR3
+	memory.timing_en        :NUM[0,1]     :ddr 训练设置,only for DDR3(train_en为 1时，此值不起作用。) 0. 采用软件代码里默认值作为ddr参数;1. 采用本item里配置的参数.
+	memory.tras             :NUM          :ddr 参数
+	memory.trfc             :NUM          :ddr 参数
+	memory.lpddr_type_en    :NUM[0,1]     :lpddr 类型支持
+	memory.tr_fr_max        :NUM[同memory.freq]    :Ddr 训练用：训练时从最大值开始尝试
+	memory.tr_fr_low	:NUM[同memory.freq]    :训练结果低于此值时，将会提示此pcb板ddr性能问题	
+	memory.tr_pre_lv        :NUM[1~7]     :保护带的大小，ddr训练时会从高到低显示能通过测试的从高到低显示能通过测试的值。此域表示预留多大的空间。
+#----------------------------------------------------------------------
+memory.cscount		1        # 1 or 2
+memory.power	        pmu.swio
+memory.freq		444      # 
+memory.type             DDR3     # mDDR DDR2 DDR3 or LPDDR2
+memory.io_width         8        # 8 16 or 32
+memory.density          2GB      # 64MB 128MB 256MB 512MB 1GB 2GB 4GB 8GB
+memory.cl               6        # 2 ~ 8
+memory.rtt              DIV_4    # DIV_4 DIV_2 DIV_6 only for DDR3
+memory.driver           DIV_6    # DIV_6 DIV_7 only for DDR3
+memory.reduce_en        0        # 0 or 1  0 : 32bit total    1 : 16bit total
+memory.train_en         0        # 0 or 1  only support for ddr3
+memory.timing_en        0        # 0 or 1  0 : use default value  1 : use memory.tras and memory.trfc (should depend on the training result)
+memory.tras             15       # train_en = 0 and timing_en = 1
+memory.trfc             64       # train_en = 0 and timing_en = 1
+memory.lpddr_type_en    0        # for LPDDR2 S2 or S4 and 1GB mDDR addr row and col
+memory.tr_fr_max        528      #  600 ~ 264
+memory.tr_fr_low		396      # describe the frequency from which is not acceptalbe
+memory.tr_pre_lv        5        #  1 ~ 
+#-----------------------------------------------------------------------
+
+双NAND的配置
+######################### double nand #################################
+nand.1.cs               825     # 1.cs是选择片选的意思，支持0、1、2、3，单nand是默认的0片选，不需要配置，1是根据具体的片选来配置
+                                # 825是没有实际意义的
+#-----------------------------------------------------------------------
+        nand.1.cs       825
+#-----------------------------------------------------------------------
+
+摄像头参数设置
+############################ camera ###################################
+#camera.rear.exist                 :NUM[0,1]     :是否支持后置摄像头，whether the device has a camera facing away from the screen
+#camera.front.exist                :NUM[0,1]     :是否支持前置摄像头，the device has a front facing camera
+#camera.autofocus.exist            :NUM[0,1]     :是否支持自动对焦，the device's camera supports auto-focus
+#camera.flash.exist                :NUM[0,1]     :是否有闪光灯，the device's camera supports flash
+
+#camera.front.interface            :STR [LIST]    :前camera接口类型,目前支持的列表为:(isp(camif,mipi),usb,camif)
+#camera.front.model                :STR [LIST]    :前camera支持型号camera support list  ---> bootable/linux-3.0.8/drivers/InfotmMedia/camsen_lib/source/sensors/
+#camera.front.orientation          :NUM[0,90,180,270]  :前camera旋转方向camera rotation direction (eg: 0 90 180 270)
+#camera.front.data_type            : STR [LIST](low8_align  mid8_align high8_align low10_align high10_align high12_align)   :前camera数据位数及对齐方式,目前支持的列表为:data alignment 
+#camera.front.ctrl                 :STR [I2C]     :前camera控制接口总线,I2C bus hardware interface ---(i2c.0 i2c.1 i2c.2 i2c.3)
+#camera.front.power_iovdd          :[PMU, PADS]   :前camera io口电压供电IOVDD 
+#camera.front.power_dvdd           :STR [PMU, PADS]    :前camera dvdd电压供电DVDD
+#camera.front.power_down           :STR [PMU, PADS]    :前camera power down配置camera power down gpio
+#----------------------------------------------------------------------
+	camera.front.interface          isp
+	camera.front.model              gt2005_pc0am0004b
+	camera.front.orientation        0
+	camera.front.data_type          low8_align
+	camera.front.ctrl               i2c.1
+	camera.front.power_iovdd        pmu.vaux1
+	camera.front.power_dvdd         pmu.vdig2
+	camera.front.power_down         pads.136
+#------rear camera------ 
+	camera.rear.interface           isp
+	camera.rear.model               gt2005_pc0am0008a
+	camera.rear.orientation         0
+	camera.rear.data_type           low8_align
+	camera.rear.ctrl                i2c.1
+	camera.rear.power_iovdd         pmu.vaux1
+	camera.rear.power_dvdd          pmu.vdig2
+	camera.rear.power_down          pads.137
+#----------------------------------------------------------------------
+
+
+LCD参数设置
+############################## InfoTM Display System ################## 
+#ids.locidsx               :
+#ids.fb.resvFblayer        :
+#ids.fb.pixfmt             : LCD display Data format default (888) or 565
+#ids.fb.width              : lcd width
+#ids.fb.height             : lcd height
+
+#ids.loc.dev.num           :
+#ids.loc.dev.prefer        :
+#ids.loc.dev0.interface    : ids hardware interface  eg: lcd  i180  dsi
+#ids.loc.dev0.type         : surport LCD ---> bootable/linux-3.0.8/drivers/InfotmMedia/lcd_api/source/lcd_cfg.h
+#ids.loc.dev0.data_port    : lcd hardware interface ID eg: 888 666 565 
+#ids.loc.dev0.rgb_order    : lcd rgb format  eg: rgb bgr ......  
+#ids.loc.dev0.lvds.power   : lvds power gpio
+#ids.loc.dev0.lcd.power    : lcd power gpio
+#ids.loc.dev0.acm_level    : lcd color setting  default (60)
+#ids.loc.dev0.standby_pin  : 
+#ids.loc.dev0.acm_level    : color setting 默认值设为0
+
+#ids.ext.dev.num           :
+#ids.ext.dev.prefer        :
+#ids.ext.dev0.interface    :
+#ids.ext.dev0.type         :
+
+#----------------------------------------------------------------------
+	ids.locidsx               0
+	ids.fb.resvFblayer        1
+	ids.fb.pixfmt             888
+	ids.fb.width              1024
+	ids.fb.height             768
+
+	ids.loc.dev.num           1
+	ids.loc.dev.prefer        0
+	ids.loc.dev0.interface    lcd
+	ids.loc.dev0.type         BF097XN_1024x768
+	ids.loc.dev0.data_port    666
+	ids.loc.dev0.rgb_order    bgr
+	ids.loc.dev0.lvds.power   pmu.vmmc
+	ids.loc.dev0.lcd.power    pads.27
+	ids.loc.dev0.acm_level    0
+
+	ids.ext.dev.num           1
+	ids.ext.dev.prefer        0
+	ids.ext.dev0.interface    hdmi
+	ids.ext.dev0.type         dynamic
+#----------------------------------------------------------------------
+
+
+背光参数设置
+############################ Backlight ################################
+#bl.ctrl             :STR [PWM]     :背光控制接口,backlight hardware interface  eg. (ids pwm.0 pwm.1 pwm.2 pwm.3 pwm.4)
+#bl.start            :NUM     :背光pwm开始频率(最大0xffff),backlight max=0xffff  eg. 6136= 6136*(1/4MHZ)=1534us
+#bl.msleep           :NUM     :背光打开延时,根据LCD spec填写,参数为ms. open backlight delay for spec.
+#bl.low_intensity    :NUM     :背光最低值设置,最大值0x2ff=767,backlight low setting eg. min =20  
+#bl.high_intensity   :NUM     :背光占空比默认值，最大0x2ff=767,backlight high setting max=767
+#bl.def_intensity    :NUM     :背光占空比默认值，最大0x2ff=767,backlight duty eg. 613= 80%=613/767
+#----------------------------------------------------------------------
+	bl.ctrl   pwm.0
+	bl.start  6136
+	bl.msleep 250
+	bl.low_intensity 20
+	bl.high_intensity 255
+	bl.def_intensity 613
+#----------------------------------------------------------------------
+	 
+
+Codec参数设置
+################################# codec ###############################
+#codec.model	          :STR [LIST]     :所选用的codec支持型号,support es8328 rt5631
+#codec.power		  :STR [PMU,PADS]    :Codec电源 codec power 
+#codec.ctrl		  :STR [I2C]     :Codec控制总线,codec ctrl hardware interface eg.(i2c.1)
+#codec.data               :STR [I2S]     :Codec数据总线,codec data hardware interface eg.(i2c.0)
+#codec.hp_highlevel_en    :
+#codec.spk                :STR[PADS]    :Spk开关引脚，如不需要控制，则屏蔽此项,speeker switch gpio
+#codec.hp                 :STR [ADC,PADS]    :耳机插入检测引脚 earphone detect pin
+#codec.volume             :#(support es8328&rt5631)spk volume range 0-100,if disable item then use default volume
+#codec.micvolume          :# support mic volume range 0-100
+#codec.conf               :
+#codec.playback           :
+#codec.capture            :
+#----------------------------------------------------------------------
+codec.model               rt5631
+codec.power               pmu.vaux33
+codec.ctrl                i2c.1
+codec.data                i2s.0 
+#codec.hp_highlevel_en    0
+#codec.spk                pads.53
+#codec.hp                 pads.30
+#codec.volume             80      
+#codec.micvolume          36     
+#codec.conf               alsa_dmic.conf
+#codec.playback           pwma
+#codec.capture            dmic
+#----------------------------------------------------------------------
+
+
+OTG设置
+################################### OTG ###############################
+#otg.function	    :STR [LIST]     :OTG工作方式(支持哪些方式？) eg . (auto =host and slave auto detect for ID) (usb = only host) (slave = only slave)  	
+#otg.design		: default (standard)
+#otg.nluns	        :NUM[2，3，4]     ：PC，上显示的最大盘符数，根据实际平台配置，mid mount pc it will enumeration eg. udisk-local-sdcard
+#otg.local.label  	:STR	:该处设置的字符串为连接电脑后本地磁盘在电脑上显示的盘符名称
+#----------------------------------------------------------------------
+	otg.function		auto
+	otg.design			standard
+	otg.nluns	        4
+	otg.local.label  	GF33
+#----------------------------------------------------------------------
+
+
+触屏设置
+#################################### touch screen ######################	
+#touchscreen.exist                       :NUM[0,1]    :是否支持触摸屏，whether the device's display has a touch screen
+
+#touchscreen.multitouch.exist            :NUM[0,1]    :是否支持触摸屏，whether the device's touch screen supports multitouch sufficient for 
+										  #basic two-finger gesture detection ,this will contain touchscreen.exist feature
+
+#touchscreen.multitouch.distinct.exist   :NUM[0,1]    :是否支持两点及以上触摸屏，whether the device's touch screen is capable of tracking two or 
+										  #more fingers fully independently.this contain touchscreen.multitouch.exist feature
+
+#touchscreen.multitouch.jazzhand.exist   :NUM[0,1]    :是否支持五点及以上触摸屏，whether the device's touch screen is capable of tracking a full hand of fingers fully 
+										  #independently -- that is, 5 or more simultaneous independent pointers.this contain
+										  #touchscreen.multitouch.distinct.exist feature
+#ts.model	    :STR [LIST]     :所选用的touch screen型号,support --> bootable/linux-3.0.8/drivers/input/touchscreen
+#ts.ctrl	    :STR [I2C]     :touch screen 控制总线,hardware interface for i2C bus eg.(i2c.2)
+#ts.reset	    :STR [PADS]     :touch screen复位信号管脚,touch reset pin
+#ts.int		    :STR [PADS]     :touch screen中断信号管脚,touch Interrupt pin
+#ts.power	    :STR [PMU,PADS]    :touch screen电源供电,touch power
+#ts.keynum  	:NUM     :touch screen带的按键数量，可屏蔽此值,keynum is how many key the tp have
+#ts.key         :touch key pad Coordinate eg.{ key1.x1.y1.key2.x2.y2.key3.x3.y3.span (x,y is center coordinate,span is width and height)}
+#ts.screen      : 
+#ts.orientation :STR [LIST]（xy,xY,XY,Xy,yx,YX，yX,Yx)     :touch screen原点坐标方向,目前支持（xy,xY,XY,Xy,yx,YX，
+yX,Yx） if lcd=800x480 read pix-->xy=200,300 xY=(200,480-y)=200,180 yX=(300,800-x)=300,600
+#----------------------------------------------------------------------
+	ts.model		gt828
+	ts.ctrl			i2c.2
+	ts.reset		pads.63
+	ts.int			pads.74
+	ts.power		pmu.x
+#ts.keynum      3
+#ts.key          
+#ts.screen      1
+	ts.orientation  xy
+#----------------------------------------------------------------------
+
+
+GPS模块设置
+################################# GPS #################################
+#gps.exist              :NUM[0,1]	:是否支持GPS模块，the device has a Global Positioning System receiver and can report precise location.
+#gps.model		:STR [LIST]     :所选用的 GPS模组型号
+#gps.power		:STR [PMU,PADS]    :GPS电源
+#----------------------------------------------------------------------
+  	gps.exist						1	
+	gps.model						infotm
+	gps.power						pmu.vaux2
+#----------------------------------------------------------------------
+
+
+传感器设置 Gsensor模块 光感模块 电子罗盘模块 陀螺仪模块 
+################################ sensors ##############################
+#sensor.accelerometer.exist  :NUM[0,1]     :是否支持重力传感器，whether the device includes an accelerometer sensor.
+#sensor.grivaty.model        :STR [LIST]     :所选用的重力传感器的型号,support --> bootable/linux-3.0.8/drivers/i2c/chips	
+#sensor.grivaty.power        :STR [PMU,PADS]    :重力传感器电源管脚,g-sensor power pin	
+#sensor.grivaty.ctrl	     :STR [I2C]     :重力传感器控制总线,ctrl hardware interface with i2C bug eg.(i2c.3)	
+#sensor.grivaty.int          :STR [PADS]    :重力传感器中断信号管脚,g-sensor Interrupt pin
+#sensor.grivaty.orientation  :STR [LIST]    :重力传感器方向调整 ，可以设为XYZ大小写和置换的各种排列组合，例如(Xyz, yZX, xyz, etc.),g-sensor orientation eg.(Xyz yZX xyz ) 
+
+#sensor.light.exist          :NUM[0,1]	    :是否支持光感器，whether the device includes a light sensor.
+#sensor.light.model          :STR [LIST]    :所选用的光感器的型号	
+#sensor.light.power	     :STR [PMU,PADS]     :光感器电源管脚,light sensor power pin
+#sensor.light.ctrl	     :STR [I2C]     :光感器控制总线,ctrl hardware interface with i2C bug eg.(i2c.3)
+#sensor.light.int            :STR [PADS]    :光感器中断信号管脚,light sensor Interrupt pin
+		
+#sensor.compass.exist        :NUM[0,1]     :是否支持电子罗盘传感器，whether the device includes a magnetometer (compass).
+#sensor.compass.model        :STR [LIST]    :所选用的电子罗盘的型号	
+#sensor.compass.power	     :STR [PMU,PADS]    :电子罗盘电源管脚
+#sensor.compass.ctrl	     :STR [I2C]     :电子罗盘控制总线
+#sensor.compass.int          :STR [PADS]     :电子罗盘中断信号管脚
+
+#sensor.gyroscope.exist      :NUM[0,1]     :是否支持陀螺仪，whether the device includes a gyroscope.
+#sensor.gyro.model           :STR [LIST]     :所选用的陀螺仪的型号	
+#sensor.gyro.power	     :STR [PMU,PADS]    :陀螺仪电源管脚
+#sensor.gyro.ctrl	     :STR [I2C]     :陀螺仪控制总线
+#sensor.gyro.int	     :STR [PADS]    :陀螺仪中断信号管脚	
+#----------------------------------------------------------------------
+	sensor.accelerometer.exist   1 
+	sensor.compass.exist         0 
+	sensor.gyroscope.exist       0 
+	sensor.light.exist           0 
+	sensor.grivaty.model	     bma250
+	sensor.grivaty.power	     pmu.vdac
+	sensor.grivaty.ctrl		     i2c.3
+	sensor.grivaty.int	         pads.-75
+	sensor.grivaty.orientation   XyZ
+		
+	sensor.light.model	         ltr502als
+	sensor.light.power	         pmu.vdac
+	sensor.light.ctrl	         i2c.3
+	sensor.light.int	         pads.76
+		
+	sensor.compass.model	     mmc328
+	sensor.compass.power	     pmu.vdac
+	sensor.compass.ctrl	         i2c.3
+		
+	sensor.gyro.model	         l3g4200d
+	sensor.gyro.power	         pmu.vdac
+	sensor.gyro.ctrl	         i2c.3
+	sensor.gyro.int		         pads.77
+#----------------------------------------------------------------------
+
+按键配置
+################################# keys ################################
+#keys.channel 	        :NUM[0~9]     :按键ADC通道(根据硬件选择，如按键为AD按键，则填写此值),adc channel (0--9)	
+#keys.menu              :STR [ADC,PADS]    :菜单键，按键对应AD电压值或gpio值,支持adc (例如:adc.16,其中16为按键按下时AD处电压1.6v),pads(例如:pads.26),the menu Key corresponding to the AD voltage value to the GPIO eg. adc.16  16=1.6V
+#keys.volup		:STR [ADC,PADS]    :音量加键，the volup Key corresponding to the AD voltage value to the GPIO
+#keys.voldown	        :STR [ADC,PADS]    :音量减键，Key voldown key corresponding to the AD voltage value to the GPIO
+#keys.home		:STR [ADC,PADS]    :home键，the hardware key corresponding to  the gpio 
+#keys.back		:STR [ADC,PADS]    :返回键，the hardware key corresponding to  the gpio 
+#----------------------------------------------------------------------
+	keys.channel 		    9
+	keys.menu               adc.0
+	keys.volup		        adc.8
+	keys.voldown	        adc.16
+	keys.home		        pads.26
+	keys.back		        pads.29
+#----------------------------------------------------------------------
+
+
+键盘设置
+################################ keyboard #############################
+#keyboard.model		    :STR [LIST]     :所选 用键盘的型号，support keyboard IC
+#keyboard.region	    :STR [LIST]     :键盘布局
+#----------------------------------------------------------------------
+	keyboard.model		ht82b40xv150
+	keyboard.region		english
+#----------------------------------------------------------------------
+
+
+
+############################### TV/VGA out ###########################	
+#tv.model		:STR [LIST]     :所选TV模组的型号l3g4200d，cs8558
+#tv.i2c			:STR [I2C]     	:tv控制总线
+#----------------------------------------------------------------------
+	tv.model		cs8558
+	tv.i2c			i2c.1
+#----------------------------------------------------------------------
+
+蓝牙模块设置
+############################## bluetooth #############################
+#bluetooth.exist        :NUM[0,1]	:是否支持蓝牙模块，whether the device is capable of communicating with other devices via Bluetooth
+#bt.model		:STR [LIST]     :所选用的BT模组型号
+#bt.power		:STR [PMU,PADS]    :BT模组电源
+#bt.uart		:TR [UART]     :BT模组数据及控制总线
+#bt.int                 :STR [PMU,PADS] :BT模组检测管脚配置,x800请配置pads.xxx,x15清配置rtc.xxx
+#----------------------------------------------------------------------
+#bluetooth.exist                         1
+#bt.model		rda5876
+#bt.power		pmu.vdig1
+#bt.uart		uart.0
+#bt.int                 pads.155
+#----------------------------------------------------------------------
+
+震动马达设置
+############################# motor ###################################
+#motor.en	    :STR [PMU,PADS]    :震动马达使能管脚,motor enable pin	
+#motor.power	    :STR [PMU,PADS]    :震动马达电源管脚,motor power pin
+#----------------------------------------------------------------------
+motor.en		pads.71
+motor.power		pmu.vdig1
+#----------------------------------------------------------------------
+
+wifi模块设置
+########################### WIFI ######################################
+#wifi.exist                  :NUM[0,1]	   :是否支持wifi功能，whether the device supports WiFi (802.11) networking.
+#wifi.direct.exist           :NUM[0,1]	   :是否支持wifi direct功能，whether the device supports Wi-Fi Direct networking.
+#wifi.module    	     :STR [LIST]    :所选用的wifi模组型号,例如usb.8192cu，sdio.mtk5931
+#wifi.power     	     :STR [PMU,PADS]    :wifi模组电源控制管脚
+#----------------------------------------------------------------------
+wifi.exist                              1 
+wifi.direct.exist                       0 
+wifi.module 							usb.8192cu
+#wifi.power 							pads.x
+#----------------------------------------------------------------------
+
+充电IC模块设置
+########################### charger ic ################################
+#charger.model           :STR [LIST]     :所选用的充电芯片型号(一般不需要填写此部分)
+#charger.ctrl            :STR [I2C]      :充电芯片控制总线(一般不需要填写此部分)
+#chargerfull.detect      :STR [PADS]     :充满检测：注释掉时，默认为 ADC，如果由gpio 检测时，则需要配置相应引脚
+#----------------------------------------------------------------------
+#charger.model           bq24158
+#charger.ctrl            i2c.0
+#chargerfull.detect      pads.xx
+#----------------------------------------------------------------------
+
+存储设备分区表设置
+######################### partitions ##################################
+#bootable/linux-3.0.8/drivers/mtd/infotm/part.c  ---> if item no partitions it will used part.c
+#part.boot		 :NUM     :boot分区大小,单位为MB
+#part.misc	         :NUM     :misc分区大小 ,单位为MB	
+#part.system	         :NUM     :system分区大小,单位为MB
+#part.userdata	         :NUM     :用户数据分区大小,单位为MB
+#part.local	         :NUM     :local分区大小,单位为MB,-1为使用剩余空间	
+#----------------------------------------------------------------------
+	part.boot		50
+	part.misc		50
+	part.system		300
+	part.userdata	1000
+	part.local		-1
+#----------------------------------------------------------------------
+
+
+
+PMU模块设置
+############################## PMU ####################################
+#pmu.model		:STR [LIST]     :pmu支持型号,目前支持的列表为:tps65910 axp202 
+#pmu.ctrl		:STR [I2C]      :pmu控制接口总线 I2C BUS Hardware Interface(i2c.0 i2c.1 i2c.2 i2c.3)
+#pmu.int		:STR [PADS]     :pmu中断管脚,PMU Interrupt GPIO
+#----------------------------------------------------------------------
+	pmu.model		    tps65910
+	pmu.ctrl			i2c.0
+	pmu.int			    pads.28
+#----------------------------------------------------------------------
+		
+电池曲线 电池充电模式设置，因为电池相关items跟pmu模块型号有关，详细的Item配置请参考同级目录的battery.txt
+###################### battery ########################################
+#batt.curvetest           :用于测试电池曲线 1=enable 0=disable
+#batt.debug               :用于调试电池驱动，可以打log 1=enable 0=disable
+#batt.cap                 :电池容量
+
+#    bootable/linux-3.0.8/drivers/power/axp_power---------------for axp202
+#batt.chg                  :电池充电标准曲线，和代码中默认的一致
+#batt.dischg               :电池放电标准曲线，和代码中默认的一致
+
+# or  --->  bootable/linux-3.0.8/drivers/power/imapx820_battery_s.h  for tps65910
+#batt.chg                  :电池充电标准曲线，和代码中默认的一致
+#batt.dischg               :电池放电标准曲线，和代码中默认的一致
+
+#batt.corr.boot            :1= ?  0 =?
+#charger.enable            :1= ?  0 =?
+#batt.start                :低电关机，再次开机最低电压
+##batt.pwron               :关机时，接入充电器开机选项 1=enable 0=disable
+#----------------------------------------------------------------------
+#batt.debug		    1
+#batt.chg		    752.788.798.802.806.815.826.839.853.855.856
+#batt.dischg		702.733.740.747.751.757.767.782.795.812.834
+batt.corr.boot      1
+charger.enable      0
+#----------------------------------------------------------------------
+
+
+
+################################ PMM ##################################
+#pmm.reserve.size       :if ddr=1024MB it used 64 and if ddr=512MB it used 32 
+#----------------------------------------------------------------------
+	pmm.reserve.size        64
+#----------------------------------------------------------------------
+
+
+
+######################### video out format setting ####################
+#vdec.out.format  :
+#----------------------------------------------------------------------
+	vdec.out.format rgb565 #argb8888
+#----------------------------------------------------------------------
+
+
+############### init i2c codes, i2c.channel.address.value ############
+#initi2c.0		:
+#----------------------------------------------------------------------
+	initi2c.0		i2c.0.40.99 ##
+#----------------------------------------------------------------------
+
+
+############# support up to 10 IOs, pads.index.direction.udelay ######
+#initio.0		  :  
+#initio.1		  :
+#initio.2		  :
+#----------------------------------------------------------------------
+#initio.0		   pads.12.1.308
+#initio.1		   pads.13.0.400
+#initio.2		   pads.14.1.0
+#----------------------------------------------------------------------
+
+
+
+################################ USB ##################################
+#usb.enable              :
+#----------------------------------------------------------------------
+	usb.enable              1
+#----------------------------------------------------------------------
+
+
+############################### SDMMC ################################
+#mmc1.enable             :  
+#----------------------------------------------------------------------
+	mmc1.enable             1  
+#----------------------------------------------------------------------
+
+
+
+############################## CRYPTO ################################
+#crypto.enable          :
+#----------------------------------------------------------------------
+	crypto.enable           0
+#----------------------------------------------------------------------
+
+
+######################### PcbTest ####################################
+# vol+ 115 vol- 114 menu 139 home 102 back 158
+# pcb_test.en     :NUM[0,1]     :pcbtest功能开关
+# pcb_test.down   :NUM     :根据硬件按键,确定其值.一般用音量+ - 键翻页,menu键确认.如没有menu键,则可配置音量+或-作确认键.内核中各按键对应的按键值(115,114,139,102,158)
+# pcb_test.up     :NUM	   :同上
+# pcb_test.enter  :NUM	   :同上
+#----------------------------------------------------------------------
+# pcb_test.en   1
+# pcb_test.down   115
+# pcb_test.up     114
+# pcb_test.enter  114
+#----------------------------------------------------------------------
+
+
+以太网模块设置
+########################### ETH  ####################################
+# eth.model       :
+# eth.id0     :
+# eth.id1     :
+# eth.usb.only        1   :USB转以太开关,1 开启该功能, 0 关闭该功能
+#----------------------------------------------------------------------
+# eth.model       IP101
+# eth.id0 		  579
+# eth.id1 		  3156
+# eth.usb.only    0
+#----------------------------------------------------------------------
+
+
+FM模块设置
+########################### FM ########################################
+#fm.model       :
+#fm.i2c			:
+#----------------------------------------------------------------------
+#fm.model		rda5876
+#fm.i2c			i2c.1
+#----------------------------------------------------------------------
+
+
+状态栏音量加减图标设置
+#----------------------------------------------------------------------
+#virtual volume key up & down 
+#	virtualvolkey      :NUM[0,1]	:0为打开该功能，1为关闭该功能   
+#----------------------------------------------------------------------
+	virtualvolkey      0   
+#----------------------------------------------------------------------
+

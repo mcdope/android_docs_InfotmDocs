@@ -1,0 +1,60 @@
+0. 概述
+        本文介绍infotm平台android4.1软件kernel中battery相关驱动，文件系统充电模式进程和uboot代码相关驱动。
+        目前android4.1 同时支持3套电池驱动代码：
+                --/bootable/linux-3.0.8/drivers/power/imapx820_battery_s.c 在系统不支持接入充电器开机（即充电模式）的情况下使用，支持TPS65910和AXP152 PMU。
+                --/bootable/linux-3.0.8/drivers/power/imapx820_battery.c 在系统支持充电模式的情况下使用，支持TPS65910和AXP152 PMU。
+                --/bootable/linux-3.0.8/drivers/power/axp_power/*.* 在使用AXP202 PMU的情况下使用，带有硬件电量计方案。
+
+1. uboot部分
+        相关代码文件位置：
+                --/infotm/drivers/pmu/*.* 启动时电压判断和控制的相关代码。
+                --/common/main.c  uboot中对battery电压判断和控制的入口点，在main_loop()函数中。
+        注意：
+                a. 对于imapx15和imapx820，部分pin定义和reg定义不一样。
+                b. 对于tps65910, axp152, axp202，除了需要驱动不同的pmu型号之外，也需要判断一下硬件版本。
+                c. 最低开机电压默认3400mV，通过修改item项batt.start可以调整最低启动电压。
+                d. 对于AXP202 PMU，当电池电压低于1000mV时，认为电池未接，其他pmu没有此项判断。
+
+2. kernel部分
+        相关代码位置：
+                --/bootable/linux-3.0.8/drivers/power/imapx820_battery_s.c
+                --/bootable/linux-3.0.8/drivers/power/imapx820_battery.c
+                --/bootable/linux-3.0.8/drivers/power/imapx820_battery.h
+                --/bootable/linux-3.0.8/drivers/power/imapx820_battery_comm.c
+                --/bootable/linux-3.0.8/drivers/power/axp_power/*.*
+        说明：
+                a. 使用axp202的所有驱动代码都在axp_power目录下面, 不涉及下面的四个文件。
+                b。使用axp152, tps65910的battery驱动涉及imapx820_battery_s.c imapx820_battery.c imapx820_battery.h imapx820_battery_comm.c这四个文件。
+
+3. filesystem部分
+        主要介绍充电模式即charger mode。
+        相关代码位置：
+                system/core/charger/charger.c
+        图标位置：
+                system/core/charger/images/*.png 一共19副图片
+        说明：
+                a. 修改图片：修改图片只需要直接替换相应的图片，但是需要保持文件名和数量一致。更换了新的图片之后需要重新编译镜像。
+                b. 修改充电开机, 然后自动进入休眠的时间：POWER_ON_SUSPEND_TIME
+                C. 修改长按电源键重启时间：POWER_ON_KEY_TIME
+
+4. item说明
+        a. 公共ITEM项
+                pmu.model  //pmu的模块名称
+                batt.start  //允许系统运行的最低电压
+                charger.enable和charger.pwron  //充电模式相关选择项
+
+        b. TPS65910和AXP152需要的ITEM项
+                batt.chg //充电曲线表
+                batt.dischg //放电曲线表
+                batt.cap//电池容量
+                chargerfull.detect //充电满状态判断pin
+                batt.curvetest //用于测试电池曲线
+                batt.debug //用于驱动调试
+                batt.icc //用于保存充电时CC电流
+
+        c. AXP202需要的ITEM项
+                charger.pattern //使用I7A项目不同版本硬件对于的硬件版本
+                batt.cap        //电池容量
+                batt.ocv        //开路电压曲线表
+                batt.rdc        //初始化电池内阻
+
